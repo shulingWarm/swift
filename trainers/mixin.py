@@ -67,6 +67,18 @@ class SwiftMixin:
                  optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
                  preprocess_logits_for_metrics: Optional[Callable[[torch.Tensor, torch.Tensor], torch.Tensor]] = None,
                  **kwargs) -> None:
+
+        # 判断args里面是否有save checkpoint的回调函数
+        if hasattr(args, 'checkpoint_save_functor'):
+            # 记录回调函数
+            self.checkpoint_save_functor = args.checkpoint_save_functor
+            # 这种情况下要求 model 不能是 None
+            if (model is None):
+                raise RuntimeError('model should not be None')
+            self.checkpoint_save_functor.register_model(model = model)
+        else:
+            self.checkpoint_save_functor = None
+
         if not hasattr(train_dataset, '__len__') and args.dataloader_num_workers > 1:
             args.dataloader_num_workers = 1
             logger.warning('Using IterableDataset, setting args.dataloader_num_workers to 1.')
@@ -308,10 +320,16 @@ class SwiftMixin:
 
     def _save_checkpoint(self, *args, **kwargs):
         self.state.last_model_checkpoint = os.path.join(self.args.output_dir, f'checkpoint-{self.state.global_step}')
-        self._fix_zero3_gather_all_parameters()
-        result = super()._save_checkpoint(*args, **kwargs)
-        logger.info(f'Saving model checkpoint to {self.state.last_model_checkpoint}')
-        return result
+        # 判断是否存在回调函数
+        if (self.checkpoint_save_functor is not None):
+            # 调用save functor
+            self.checkpoint_save_functor(self.args.output_dir)
+            return None
+        else:
+            self._fix_zero3_gather_all_parameters()
+            result = super()._save_checkpoint(*args, **kwargs)
+            logger.info(f'Saving model checkpoint to {self.state.last_model_checkpoint}')
+            return result
 
     @staticmethod
     @contextmanager
