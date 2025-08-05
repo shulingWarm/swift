@@ -131,6 +131,9 @@ class TrainArguments(SwanlabArguments, TunerArguments, BaseArguments, Seq2SeqTra
     # tokenizer的functor，用于定制化tokenizer id的生成过程
     tokenizer_functor = None
 
+    # 模型训练时的loss
+    model_loss = None
+
     # plugin
     loss_type: Optional[str] = field(default=None, metadata={'help': f'loss_func choices: {list(LOSS_MAPPING.keys())}'})
     metric: Optional[str] = None

@@ -35,6 +35,11 @@ class SwiftSft(SwiftPipeline, TunerMixin):
         # 记录模型里面的callback
         if isinstance(args, TrainArguments):
             self.parameter_config_callback = args.parameter_config_callback
+            # 判断是否需要置换模型的loss
+            if (args.model_loss is not None):
+                # 在model loss里面注册tokenizer
+                args.model_loss.register_tokenizer(self.tokenizer)
+                self.model.loss_function = args.model_loss
         else:
             self.parameter_config_callback = None
 
